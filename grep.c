@@ -106,23 +106,19 @@ SIG_TYP    oldquit;
 #define    SIGQUIT    3    /* quit (ASCII FS) */
 #define    MAXCHAR   100
 
-
-
 //argc: 4
 //argv: grep  someone  Lyrics.txt
 //index:  1     2        3
-
 int main(int argc, char *argv[]) {
     char *p1, *p2;
     SIG_TYP oldintr;
-
     oldquit = signal(SIGQUIT, SIG_IGN);
     oldhup = signal(SIGHUP, SIG_IGN);
     oldintr = signal(SIGINT, SIG_IGN);
     if (signal(SIGTERM, SIG_IGN) == SIG_DFL)
         signal(SIGTERM, quit);
 	if(argc != 4) {
-		printf("Invalid grep arguments.\n");
+		printf("Invalid grep arguments.\nThe format is:\t\'grep string_to_search file_to_check\'\n.");
 		return 0;
 	}
 	else {		//argv[1] is "grep"
@@ -130,6 +126,7 @@ int main(int argc, char *argv[]) {
 			//argv[3] is the directory OR filename
 		searchstring = argv[2];
 		searchloc = argv[3];	
+
 	}
     zero = (unsigned *)malloc(nlall*sizeof(unsigned));
     tfname = mktemp(tmpXXXXX);
@@ -143,8 +140,6 @@ int main(int argc, char *argv[]) {
     quit(0);
     return 0;
 }
-
-
 
 void commands(void) {
     unsigned int *a1;
@@ -202,6 +197,7 @@ void commands(void) {
 		grepreadfile(c);
 		continue;
 	    case 'g':
+		search(searchstring, searchloc);
 		global(1);
 		continue;
 	    case 'p':
@@ -231,7 +227,7 @@ void commands(void) {
 void search(char* searchthisword, char* inthisfile) {
 	FILE *file;
 	char thisline[100];
-	if ((file = fopen(thisline, "r")) != NULL) {
+	if ((file = fopen(inthisfile, "r")) != NULL) {
 		while(fgets(thisline, 100, file)) {
 			if(strstr(searchthisword, thisline) != NULL) {
 				printf("%s\n", thisline);
@@ -265,8 +261,7 @@ void print(void) {
     pflag = 0;
 }
 
-unsigned int *
-address(void) {
+unsigned int * address(void) {
     int sign;
     unsigned int *a, *b;
     int opcnt, nextopand;
@@ -375,7 +370,6 @@ void squeeze(int i) {
 
 void newline(void) {
     int c;
-    
     if ((c = getchr()) == '\n' || c == EOF)
         return;
     if (c=='p' || c=='l' || c=='n') {
