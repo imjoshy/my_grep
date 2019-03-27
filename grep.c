@@ -36,6 +36,7 @@ char	T[]	= "TMP";
 #define	READ	0
 #define	WRITE	1
 
+#define MAXCHAR 100
 int	peekc;
 int	lastc;
 char	savedfile[FNSIZE];
@@ -99,6 +100,7 @@ char	*realloc(char *, int);
 jmp_buf	savej;
 
 char grepbuf[GBSIZE];
+char search_for[MAXCHAR];
 
 typedef void	(*SIG_TYP)(int);
 SIG_TYP	oldhup;
@@ -161,6 +163,13 @@ int main(int argc, char *argv[]) {
 	commands();
 	quit(0);
 	return 0;
+
+
+		//  ./grep search_for in_here
+	if(argc == 3) {
+			
+	}
+
 }
 
 void greperror(char c) {  
@@ -236,11 +245,8 @@ void commands(void) {
 	if (addr1==0)
 		addr1 = addr2;
 	switch(c) {
-
 	case 'e':
-
 		caseread_(c);
-
 	case 'g':
 		global(1);
 		continue;
@@ -875,16 +881,14 @@ void compile(int eof) {
 
 		case '*':
 			if (lastep==0 || *lastep==CBRA || *lastep==CKET) {
-				defchar(&ep, &c);
-				continue;
+				goto defchar;
 			}
 			*lastep |= STAR;
 			continue;
 
 		case '$':
 			if ((peekc=getchr()) != eof && peekc!='\n') {
-				defchar(&ep, &c);
-				continue;
+				goto defchar;
 			}
 			*ep++ = CDOL;
 			continue;
@@ -928,6 +932,10 @@ void compile(int eof) {
 			lastep[1] = cclcnt;
 			continue;
 			
+		defchar:
+		default:
+			*ep++ = CCHR;
+			*ep++ = c;
 		}
 	}
 }
