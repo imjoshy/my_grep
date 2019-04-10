@@ -1,16 +1,5 @@
-//
-//  grep.h
-//  Grep_project
-//
-//  Created by Josh Maranan on 3/15/19.
-//  Copyright © 2019 Josh Maranan. All rights reserved.
-//
-
 #ifndef grep_h
 #define grep_h
-
-
-
 
 char    *mktemp(char *);
 
@@ -35,6 +24,7 @@ void readfile(const char* filename);
 void search(const char* re);
 void init(void);
 unsigned int *address(void);
+void print(void);
 void puts_(char *sp);
 void putchr_(int ac);
 void putd(void);

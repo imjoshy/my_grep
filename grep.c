@@ -1,7 +1,3 @@
-/*
- * Editor
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,96 +5,19 @@
 #include <unistd.h>
 #include <setjmp.h>
 #include "grep.h"
-/* make BLKSIZE and LBSIZE 512 for smaller machines */
-#define	BLKSIZE	4096
-#define	NBLK	2047
 
-#define	NULL	0
-#define	FNSIZE	128
-#define	LBSIZE	4096
-#define	ESIZE	256
-#define	GBSIZE	256
-#define	NBRA	5
-#define	KSIZE	9
-
-#define	CBRA	1
-#define	CCHR	2
-#define	CDOT	4
-#define	CCL	6
-#define	NCCL	8
-#define	CDOL	10
-#define	CEOF	11
-#define	CKET	12
-#define	CBACK	14
-#define	CCIRC	15
-
-#define	STAR	01
-
-#define ARGC_ERROR 1		//ARGC_ERROR is 1 to exit unsuccessfully
-char	Q[]	= "";
-char	T[]	= "TMP";
-#define	READ	0
-#define	WRITE	1
-
-#define MAXCHAR 100
-int	peekc;
-int	lastc;
-char	savedfile[FNSIZE];
-char	file[FNSIZE];
-char	linebuf[LBSIZE];
-char	expbuf[ESIZE+4];
-int	given;
-unsigned int	*addr1, *addr2;
-unsigned int	*dot, *dol, *zero;
-char	genbuf[LBSIZE];
+#define NULL 0
+const int BUFSIZE = 100, BLKSIZE = 4096, NBLK = 2047, FNSIZE = 128, LBSIZE = 4096, ESIZE = 256, GBSIZE = 256, NBRA = 5, CBRA = 1, CCHR = 2, CDOT = 4, CCL = 6, NCCL = 8, CDOL = 10, CEOF = 11, CKET = 12, CBACK = 14, CCIRC = 15, STAR = 01, ARGC_ERROR = 1, READ = 0, WRITE = 1, MAXCHAR = 1000000, MAXLINE = 1000;
+char	line[70], *linp = line, buf[BUFSIZE], Q[] = "", T[] = "TMP", savedfile[FNSIZE], file[FNSIZE], linebuf[LBSIZE], expbuf[ESIZE+4], genbuf[LBSIZE], *nextip, *linebp;
+int	bufp = 0, peekc, lastc, given, ninbuf, io, pflag, vflag = 1, oflag, listf, col, tfile = -1, tline, iblock = -1, oblock = -1, ichanged, nleft, names[26], anymarks, nbra, subnewa, fchange, wrapp, nbra, subnewa, fchange, wrapp, numlines = 0;
+unsigned int	*addr1, *addr2, *dot, *dol, *zero;
 long	count;
-char	*nextip;
-char	*linebp;
-int	ninbuf;
-int	io;
-int	pflag;
-
-int	vflag	= 1;
-int	oflag;
-int	listf;
-int	col;
-char	*globp;
-int	tfile	= -1;
-int	tline;
-char	*tfname;
-char	*loc1;
-char	*loc2;
-char	ibuff[BLKSIZE];
-int	iblock	= -1;
-char	obuff[BLKSIZE];
-int	oblock	= -1;
-int	ichanged;
-int	nleft;
-char	WRERR[]	= "WRITE ERROR";
-int	names[26];
-int	anymarks;
-char	*braslist[NBRA];
-char	*braelist[NBRA];
-int	nbra;
-int	subnewa;
-int	subolda;
-int	fchange;
-int	wrapp;
+char	*globp, *tfname, *loc1, *loc2, ibuff[BLKSIZE], obuff[BLKSIZE], *braslist[NBRA], braelist[NBRA], filebuf[MAXCHAR], *fileline[MAXLINE], grepbuf[GBSIZE];
 unsigned nlall = 128;
-
 char	*mktemp(char *);
 char	tmpXXXXX[50] = "/tmp/eXXXXX";
-
 jmp_buf	savej;
-
-#define MAXCHAR 1000000		//Max file length 1M characters
-#define MAXLINE 1000
-char filebuf[MAXCHAR];
-char* fileline[MAXLINE];
-int numlines = 0;
-char grepbuf[GBSIZE];
 typedef void	(*SIG_TYP)(int);
-#define	SIGHUP	1	/* hangup */
 
 int main(int argc, char *argv[]) {
   if (argc != 3) { 
@@ -137,7 +56,6 @@ void readfile(const char* filename) {		//Read file into buffer and put into file
 }
 
 //KIND OF WORKS
-/*
 void search(const char* word) {
 	int i = 0;
 	for(; i < numlines; ++i) {		//Search for the word in each line
@@ -146,11 +64,6 @@ void search(const char* word) {
 		}
 	}
 }
-*/
-
-#define BUFSIZE 100
-char buf[BUFSIZE];  
-int bufp = 0;
 
 int getch_(void) {  
   if (lastc=peekc) {
@@ -171,7 +84,7 @@ void ungetch_(int c) {
   } 
 }
 
-
+/*	//PROVIDED but does not work for my program
 void search(const char* re) {  
   char buf[GBSIZE];  
   snprintf(buf, sizeof(buf), "/%s\n", re);  // / and \n very important 
@@ -180,7 +93,7 @@ void search(const char* re) {
   while (p >= buf) { ungetch_(*p--); }
   global(1);
 }
-
+*/
 
 void greperror(char c) {  
   getch_();  /* throw away '\n' */
@@ -235,8 +148,7 @@ void commands(void) {
 }
 
 void print(void) {
-	unsigned int *a1;
-	a1 = addr1;
+	unsigned int *a1 = addr1;
 	do {
 		puts_(getline_(*a1++));
 	} while (a1 <= addr2);
@@ -244,17 +156,11 @@ void print(void) {
 	pflag = 0;
 }
 
-
 unsigned int* address(void) {
-	int sign;
-	unsigned int *a, *b;
-	int opcnt, nextopand;
+	int sign = 1;
+	unsigned int *a = dot, *b;
+	int opcnt = 0, nextopand = -1;
 	int c;
-
-	nextopand = -1;
-	sign = 1;
-	opcnt = 0;
-	a = dot;
 	do {
 		do c = getch_(); while (c==' ' || c=='\t');
 		if ('0'<=c && c<='9') {
@@ -330,10 +236,7 @@ void setwide(void) {
 
 void filename(int comm) {
 	char *p1, *p2;
-	int c;
-
-	count = 0;
-	c = getch_();
+	int c = getch_();
 	if (c=='\n' || c==EOF) {
 		p1 = savedfile;
 		if (*p1==0 && comm!='f')
@@ -359,14 +262,12 @@ void filename(int comm) {
 	if (savedfile[0]==0 || comm=='e' || comm=='f') {
 		p1 = savedfile;
 		p2 = file;
-		while (*p1++ = *p2++)
-			;
+		while (*p1++ = *p2++);
 	}
 }
 
 void error(char *s) {
 	int c;
-
 	wrapp = 0;
 	putchr_('?');
 	puts_(s);
@@ -407,10 +308,7 @@ int getchr(void) {
 
 int getfile(void) {
 	int c;
-	char *lp, *fp;
-
-	lp = linebuf;
-	fp = nextip;
+	char *lp = linebuf, *fp = nextip;
 	do {
 		if (--ninbuf < 0) {
 			if ((ninbuf = read(io, genbuf, LBSIZE)-1) < 0)
@@ -443,14 +341,10 @@ int getfile(void) {
 
 int append(int (*f)(void), unsigned int *a) {
 	unsigned int *a1, *a2, *rdot;
-	int nline, tl;
-
-	nline = 0;
-	dot = a;
+	int nline = 0, tl;
 	while ((*f)() == 0) {
 		if ((dol-zero)+1 >= nlall) {
 			unsigned *ozero = zero;
-
 			nlall += 1024;
 			if ((zero = (unsigned *)realloc((char *)zero, nlall*sizeof(unsigned)))==NULL) {
 				error("MEM?");
@@ -480,13 +374,8 @@ void quit(int n) {
 }
 
 char * getline_(unsigned int tl) {
-	char *bp, *lp;
-	int nl;
-
-	lp = linebuf;
-	bp = getblock(tl, READ);
-	nl = nleft;
-	tl &= ~((BLKSIZE/2)-1);
+	char *bp = getblock(tl, READ), *lp = linebuf;
+	int nl = nleft;
 	while (*lp++ = *bp++)
 		if (--nl == 0) {
 			bp = getblock(tl+=(BLKSIZE/2), READ);
@@ -496,15 +385,10 @@ char * getline_(unsigned int tl) {
 }
 
 int putline(void) {
-	char *bp, *lp;
-	int nl;
-	unsigned int tl;
-
+	unsigned int tl = tline;
+	char *bp = getblock(tl, WRITE), *lp = linebuf;
+	int nl = nleft;
 	fchange = 1;
-	lp = linebuf;
-	tl = tline;
-	bp = getblock(tl, WRITE);
-	nl = nleft;
 	tl &= ~((BLKSIZE/2)-1);
 	while (*bp = *lp++) {
 		if (*bp++ == '\n') {
@@ -523,10 +407,7 @@ int putline(void) {
 }
 
 char* getblock(unsigned int atl, int iof) {
-	int bno, off;
-	
-	bno = (atl/(BLKSIZE/2));
-	off = (atl<<1) & (BLKSIZE-1) & ~03;
+	int bno = (atl/(BLKSIZE/2)), off = (atl<<1) & (BLKSIZE-1) & ~03;
 	if (bno >= NBLK) {
 		lastc = '\n';
 		error(T);
@@ -561,7 +442,6 @@ void blkio(int b, char *buf, int (*iofcn)(int, char*, int)) {
 
 void init(void) {
 	int *markp;
-
 	close(tfile);
 	tline = 2;
 	for (markp = names; markp < &names[26]; )
@@ -627,13 +507,10 @@ void defchar(char** ep, int* c) {
 
 void compile(int eof) {
 	int c;
-	char *ep;
+	char *ep = expbuf;
 	char *lastep;
-	char bracket[NBRA], *bracketp;
+	char bracket[NBRA], *bracketp = bracket;
 	int cclcnt;
-
-	ep = expbuf;
-	bracketp = bracket;
 	if ((c = getch_()) == '\n') {
 		peekc = c;
 		c = eof;
@@ -650,7 +527,6 @@ void compile(int eof) {
 	}
 	peekc = c;
 	lastep = 0;
-
 	for (;;) {
 		if (ep >= &expbuf[ESIZE]) {
 			exit(0);
@@ -700,22 +576,18 @@ void compile(int eof) {
 			}
 			*ep++ = c;
 			continue;
-
 		case '.':
 			*ep++ = CDOT;
 			continue;
-
 		case '\n':
 			exit(0);
 
 		case '*':
 			*lastep |= STAR;
 			continue;
-
 		case '$':
 			*ep++ = CDOL;
 			continue;
-
 		case '[':
 			*ep++ = CCL;
 			*ep++ = 0;
@@ -761,7 +633,6 @@ void compile(int eof) {
 int execute(unsigned int *addr) {
 	char *p1, *p2;
 	int c;
-
 	for (c=0; c<NBRA; c++) {
 		braslist[c] = 0;
 		braelist[c] = 0;
@@ -792,7 +663,6 @@ int execute(unsigned int *addr) {
 int advance(char *lp, char *ep) {
 	char *curlp;
 	int i;
-
 	for (;;) switch (*ep++) {
 
 	case CCHR:
@@ -807,7 +677,6 @@ int advance(char *lp, char *ep) {
 		error(Q);
 	}
 }
-
 void puts_(char *sp) {
 	col = 0;
 	while (*sp)
@@ -815,17 +684,10 @@ void puts_(char *sp) {
 	putchr_('\n');
 }
 
-char	line[70];
-char	*linp	= line;
-
 void putchr_(int ac) {
-	char *lp;
-	int c;
-
-	lp = linp;
-	c = ac;
+	char *lp = linp;
+	int c = ac;
 	if (listf) {
-		 
 			if (col > (72-4-2)) {
 				col = 8;
 				*lp++ = '\\';
@@ -847,7 +709,6 @@ void putchr_(int ac) {
 				c     = ( c    &07)+'0';
 				col += 3;
 			}
-		
 	}
 	*lp++ = c;
 	if(c == '\n' || lp >= &line[64]) {
