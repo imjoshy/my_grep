@@ -507,7 +507,8 @@ void global(int k) {
 }
 
 void defchar(char** ep, char* c) {
-    *ep++ = CCHR;
+    char ch = CCHR;
+    *ep++ = &ch;
     *ep++ = c;
 }
 
